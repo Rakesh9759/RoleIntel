@@ -7,7 +7,16 @@ from sqlalchemy.orm import Session
 from roleintel.database import get_session
 from roleintel.jobs import create_job, get_job, list_jobs, update_job_status
 from roleintel.models import Job
-from roleintel.schemas import ErrorResponse, JobCreate, JobFilters, JobRead, StatusUpdate
+from roleintel.parsing import normalize_description
+from roleintel.schemas import (
+    ErrorResponse,
+    JobCreate,
+    JobFilters,
+    JobParseRequest,
+    JobParseResult,
+    JobRead,
+    StatusUpdate,
+)
 
 router = APIRouter(
     prefix="/api/jobs",
@@ -25,6 +34,11 @@ def submit_job(submission: JobCreate, session: DatabaseSession) -> Job:
 @router.get("", response_model=list[JobRead])
 def saved_jobs(session: DatabaseSession, filters: Annotated[JobFilters, Query()]) -> list[Job]:
     return list_jobs(session, filters)
+
+
+@router.post("/parse", response_model=JobParseResult)
+def parse_description(submission: JobParseRequest) -> JobParseResult:
+    return normalize_description(submission)
 
 
 @router.get(

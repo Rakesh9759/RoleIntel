@@ -1,4 +1,5 @@
 import { isJobDetail, isSavedJob } from "@/lib/jobs";
+import { isJobDraft } from "@/lib/job-draft";
 
 function failure(status: number, message: string) {
   return Response.json(
@@ -8,7 +9,8 @@ function failure(status: number, message: string) {
 }
 
 export async function forwardJobRequest(request: Request, path = "/api/jobs") {
-  const detail = path !== "/api/jobs";
+  const parsing = path === "/api/jobs/parse";
+  const detail = path !== "/api/jobs" && !parsing;
   let base: URL;
   try {
     base = new URL(process.env.ROLEINTEL_API_URL ?? "");
@@ -71,9 +73,11 @@ export async function forwardJobRequest(request: Request, path = "/api/jobs") {
     console.error("Job API request failed or timed out");
     return failure(
       503,
-      detail
-        ? "Job service could not be reached. Reload the job before retrying a status update; it may have completed."
-        : "Job service could not be reached. If saving, check the list before resubmitting; the save may have completed.",
+      parsing
+        ? "Description normalization service could not be reached. Your text has not been saved."
+        : detail
+          ? "Job service could not be reached. Reload the job before retrying a status update; it may have completed."
+          : "Job service could not be reached. If saving, check the list before resubmitting; the save may have completed.",
     );
   }
   if (!response.ok) {
@@ -86,15 +90,19 @@ export async function forwardJobRequest(request: Request, path = "/api/jobs") {
     if (response.status === 422)
       return failure(
         422,
-        detail
-          ? "Check the job ID and select a documented application status."
-          : "Check the job fields or filters. Provide a description or an HTTP(S) URL without credentials.",
+        parsing
+          ? "Provide a nonblank plain-text description, at most 100,000 characters, without control characters."
+          : detail
+            ? "Check the job ID and select a documented application status."
+            : "Check the job fields or filters. Provide a description or an HTTP(S) URL without credentials.",
       );
     return failure(
       503,
-      detail
-        ? "Job service is unavailable. Check the API and database; reload the job before retrying a status update."
-        : "Job service is unavailable. Check the API and database. If saving, check the list before resubmitting.",
+      parsing
+        ? "Description normalization service is unavailable. Your text has not been saved."
+        : detail
+          ? "Job service is unavailable. Check the API and database; reload the job before retrying a status update."
+          : "Job service is unavailable. Check the API and database. If saving, check the list before resubmitting.",
     );
   }
 
@@ -105,27 +113,33 @@ export async function forwardJobRequest(request: Request, path = "/api/jobs") {
     console.error("Job API returned invalid JSON");
     return failure(
       502,
-      detail
-        ? "Job service returned an invalid response. Reload the job before retrying a status update."
-        : "Job service returned an invalid response. If saving, check the list before resubmitting.",
+      parsing
+        ? "Description normalization service returned an invalid preview. Nothing has been saved."
+        : detail
+          ? "Job service returned an invalid response. Reload the job before retrying a status update."
+          : "Job service returned an invalid response. If saving, check the list before resubmitting.",
     );
   }
-  const valid = detail
-    ? isJobDetail(data)
-    : request.method === "GET"
-      ? Array.isArray(data) && data.every(isSavedJob)
-      : isSavedJob(data);
+  const valid = parsing
+    ? isJobDraft(data)
+    : detail
+      ? isJobDetail(data)
+      : request.method === "GET"
+        ? Array.isArray(data) && data.every(isSavedJob)
+        : isSavedJob(data);
   if (!valid) {
     console.error("Job API returned an unexpected response shape");
     return failure(
       502,
-      detail
-        ? "Job service returned an invalid response. Reload the job before retrying a status update."
-        : "Job service returned an invalid response. If saving, check the list before resubmitting.",
+      parsing
+        ? "Description normalization service returned an invalid preview. Nothing has been saved."
+        : detail
+          ? "Job service returned an invalid response. Reload the job before retrying a status update."
+          : "Job service returned an invalid response. If saving, check the list before resubmitting.",
     );
   }
   return Response.json(data, {
-    status: request.method === "POST" ? 201 : 200,
+    status: request.method === "POST" && !parsing ? 201 : 200,
     headers: { "Cache-Control": "no-store" },
   });
 }

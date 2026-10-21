@@ -1,6 +1,6 @@
 # RoleIntel
 
-RoleIntel is an evolving job-intelligence and referral platform. This repository is being built in small, validated milestones. Phase 0 foundations are complete; Phase 1 includes job/application persistence, job APIs, a responsive dashboard shell and API-connected saved-job submission, listing, filters and pagination.
+RoleIntel is an evolving job-intelligence and referral platform. This repository is being built in small, validated milestones. Phase 0 foundations are complete; Phase 1 includes job/application persistence, job APIs, a responsive dashboard shell, saved-job submission/listing/details/status controls, and reviewable manual-description normalization.
 
 ## Architecture
 
@@ -52,10 +52,48 @@ The dashboard at `/` has persistent desktop navigation and an expandable mobile
 menu. Keyboard users can skip to main content or close the open menu with Escape.
 Navigation links resolve to `/search` (job search), `/jobs` (saved jobs),
 `/contacts`, `/messages`, `/applications` (application tracker), and `/settings`.
-The saved jobs page is functional; the other five destinations remain explicitly
-labeled placeholders. Dashboard aggregate metrics read **Not connected**, not
+Saved jobs and manual-description import on Job search are functional; the other
+four destinations remain explicitly labeled placeholders. Dashboard aggregate metrics read **Not connected**, not
 fabricated counts. Saved jobs link to persisted detail pages with status controls.
 External discovery, URL parsing and messaging remain deferred.
+
+### Paste and review a description
+
+Open `/search`, paste plain text (up to 100,000 characters), then select
+**Normalize description**. No API call occurs until that action. The parser
+normalizes CRLF/CR to LF, trims lines, collapses horizontal whitespace and limits
+blank runs to one empty line. It keeps the complete description, including
+unrecognized lines and literal markup; markup is never executed or converted
+into HTML. C0 control characters other than tab/newline/carriage return are rejected.
+
+Only these explicit, single-line colon labels are extracted (case-insensitive):
+
+| Labels | Draft field |
+| --- | --- |
+| Company, Company name | Company |
+| Title, Job title | Title |
+| Job ID, Requisition ID | Requisition ID |
+| Location | Location |
+| Technologies, Required technologies | Technologies |
+| Experience requirements | Experience requirements |
+| Seniority | Seniority |
+| Department, Team | Department |
+
+No inference from prose, keyword scanning, network lookup or source URL
+extraction is performed. Technology labels split on commas/semicolons and
+deduplicate exact entries. Identical repeated labels are accepted; blank or
+conflicting labels (including aliases) leave that field null with a warning.
+Oversized extracted values also stay null with warnings, not truncated. Other
+unknown fields remain null. Facts are user-supplied, not independently verified.
+
+Review/edit all fields in the preview; blank controls mean **Not available**.
+The technology editor uses **one entry per line**, preserving commas within
+manually edited entries. An optional source URL can be entered manually; it is
+stored only, never fetched. Select **Save reviewed job** to create the job and
+Interested tracking record. Parsing itself writes nothing. Failed normalization
+keeps the original text; failed saves keep preview edits. After an ambiguous save
+failure, check Saved jobs before resubmitting. Returning to the original pasted
+text explicitly discards preview edits; there is no autosave.
 
 ### Saved jobs
 
@@ -64,7 +102,7 @@ example: `http://127.0.0.1:8000`). Use an HTTP(S) origin only, with no credentia
 path, query or fragment. Next.js loads this file from the web app directory, not
 the repository root. Restart the web server after changing it. This variable is
 server-only; do not prefix it with `NEXT_PUBLIC_`. No browser CORS setup is needed:
-the browser uses same-origin `/api/jobs` GET/POST and per-job GET/PATCH route handlers, which forward
+the browser uses same-origin `/api/jobs` GET/POST, `/api/jobs/parse` POST and per-job GET/PATCH route handlers, which forward
 only to the configured backend, without cookies, redirects or caching.
 
 Start PostgreSQL, apply migrations and run FastAPI to use `/jobs`. Submit a
@@ -191,6 +229,12 @@ repository root so it can load the root `.env`.
   application record, independent of listing pagination. A missing job returns
   structured `404` with code `job_not_found`; an invalid UUID returns `422`.
   Missing tracking remains null and does not prevent reading job details.
+- `POST /api/jobs/parse` accepts only `{"description":"..."}` and returns `200`
+  with a normalized job draft (same field names as creation) plus `warnings`.
+  It has no job/application IDs or timestamps, needs no database and makes no
+  outbound requests. Input validation returns redacted `422`. Remove `warnings`
+  before submitting a reviewed draft to `POST /api/jobs`; creation still rejects
+  unknown fields. This is manual text normalization, not provider URL parsing.
 
 Example:
 

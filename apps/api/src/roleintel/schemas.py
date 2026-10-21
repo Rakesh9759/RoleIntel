@@ -4,7 +4,15 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 from roleintel.models import ApplicationStatus
 
@@ -39,6 +47,23 @@ class JobCreate(BaseModel):
         ):
             raise ValueError("source_url must not contain credentials")
         return self
+
+
+class JobParseRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    description: Description
+
+    @field_validator("description")
+    @classmethod
+    def validate_plain_text(cls, value: str) -> str:
+        if any(ord(char) < 32 and char not in "\r\n\t" for char in value):
+            raise ValueError("Description must be plain text without control characters")
+        return value
+
+
+class JobParseResult(JobCreate):
+    warnings: list[str]
 
 
 class ApplicationRead(BaseModel):

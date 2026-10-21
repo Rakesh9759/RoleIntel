@@ -103,6 +103,24 @@ Provide a fallback allowing users to paste a job description manually.
 
 Do not fabricate missing fields. Display "Not available" when information cannot be verified.
 
+The manual fallback accepts plain text up to 100,000 characters. Normalize line
+endings and whitespace while preserving paragraph boundaries and the complete
+description. Extract only explicit single-line `Label: value` facts; do not infer
+company/title from prose or scan for technology keywords. Supported labels are
+Company / Company name, Title / Job title, Job ID / Requisition ID, Location,
+Technologies / Required technologies, Experience requirements, Seniority, and
+Department / Team. Label matching is case-insensitive. Technologies must be an
+explicit comma- or semicolon-separated list. Blank, conflicting or oversized
+values stay null with review warnings. Missing values stay null; submitted facts
+are not independently verified. Source URLs are not extracted from the text.
+
+`POST /api/jobs/parse` returns a normalized draft and warnings without accessing
+the database, fetching URLs or creating records. The Job search page presents an
+editable preview. Users may correct/add fields, including an optional source
+URL, then explicitly save through the existing job-creation endpoint. Keep
+original text on normalization failures and preview edits on save failures.
+Provider URL imports remain separate increments.
+
 ### 4. Job Management
 
 Users should be able to:
