@@ -111,12 +111,15 @@ The root `pyrightconfig.json` supplies the API source path and basic type-checki
 configuration for Pylance in the monorepo. Select the API virtual environment in
 VS Code after installing dependencies.
 
-The PostgreSQL migration test is skipped unless `TEST_DATABASE_URL` is set.
+The PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` is set.
 Point it at a **dedicated disposable PostgreSQL database**, never a production
 database or the normal development database. The test uses a uniquely named
 temporary schema, checks upgrade/downgrade/re-upgrade and ORM/schema consistency,
-then removes its schema. CI supplies PostgreSQL and runs this check on each
-supported Python version.
+then removes its schema. Persistence tests migrate a separate schema per test
+and verify real commits and reconnects, all 49 status pairs, invalid values,
+foreign-key/uniqueness constraints, deletion cascades, rollback, and update timestamps.
+Those tests commit to the disposable database and remove their schemas in teardown.
+CI supplies PostgreSQL and runs these checks on each supported Python version.
 
 Example, assuming a separate `roleintel_test` database has already been created:
 
