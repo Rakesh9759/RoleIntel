@@ -1,17 +1,17 @@
 # RoleIntel
 
-RoleIntel is an evolving job-intelligence and referral platform. This repository is being built in small, validated milestones. Phase 0 foundations are complete; Phase 1 begins with the job/application persistence schema, not the product dashboard or job workflows.
+RoleIntel is an evolving job-intelligence and referral platform. This repository is being built in small, validated milestones. Phase 0 foundations are complete; Phase 1 currently includes job/application persistence and basic job submission/listing APIs, not the product dashboard.
 
 ## Architecture
 
-- `apps/api` — Python, FastAPI, Pydantic; currently exposes a health endpoint.
+- `apps/api` — Python, FastAPI, Pydantic; exposes health and job submission/listing endpoints.
 - `apps/api/src/roleintel/models.py` — typed SQLAlchemy job and application models.
 - `apps/api/migrations` — versioned PostgreSQL schema managed by Alembic.
 - `apps/web` — Next.js App Router, React, TypeScript, Tailwind CSS, and shadcn/ui; currently contains a foundation landing page and a reusable UI primitive.
 - `docker-compose.yml` — local PostgreSQL service for future persistence work.
 - `.github/workflows/ci.yml` — backend and frontend checks for pushes and pull requests targeting `main`.
 
-Job APIs, dashboard workflows, and third-party providers remain deferred. The backend exposes interactive API documentation at `/docs` when running. Its health endpoint does not require database configuration or a running database.
+Additional job APIs, dashboard workflows, and third-party providers remain deferred. The backend exposes interactive API documentation at `/docs` when running. Its health endpoint does not require database configuration or a running database.
 
 ## Prerequisites
 
@@ -97,6 +97,52 @@ and application data):
 python -m alembic -c apps\api\alembic.ini downgrade base
 ```
 
+## Job API
+
+After configuring `DATABASE_URL` and applying migrations, start the API from the
+repository root so it can load the root `.env`.
+
+- `POST /api/jobs` accepts a JSON object and returns `201` with the saved job,
+  IDs, timestamps, and nested Interested application record. Both records are
+  committed atomically. At least `description` or `source_url` is required.
+- `GET /api/jobs` returns `200` with a JSON array of saved jobs, newest first,
+  ordered by creation timestamp and then ID descending. An empty database returns
+  `[]`. This initial local-MVP endpoint returns all jobs; pagination and filtering
+  will be added in the next increment.
+
+Example:
+
+```powershell
+$body = @{
+    description = "Paste the actual job description here."
+    title = "User-supplied job title"
+    source_url = "https://example.com/jobs/42"
+} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/jobs -ContentType "application/json" -Body $body
+Invoke-RestMethod -Uri http://localhost:8000/api/jobs
+```
+
+Optional fields are `company`, `title`, `requisition_id`, `location`,
+`technologies`, `experience_requirements`, `seniority`, and `department`.
+Unknown fields remain null; clients cannot set IDs, timestamps, or initial status.
+Strings are trimmed and cannot be blank when supplied. Short fields and each
+technology are limited to 1,000 characters; descriptions and experience
+requirements to 100,000 characters; technologies to 100 entries; and source URLs
+to 2,048 characters. Source URLs must be HTTP(S) without embedded credentials.
+They are **stored only, never fetched**, and need not identify a supported
+provider yet. Each submission creates a new job; deduplication is not implemented.
+
+Invalid bodies return `422` with structured validation details without echoing
+input values. Database/configuration failures return `503` with
+`{"detail":{"code":"database_unavailable","message":"Database is unavailable"}}`;
+server logs report a redacted error rather than credentials or submitted content.
+Database engines are created lazily and disposed on application shutdown.
+Restart the API after changing database connection settings.
+
+This is a local single-user API with no authentication. Do not expose it publicly.
+Detail routes, filtering, pagination, status updates, URL parsing and UI integration
+are not implemented in this increment.
+
 ## Checks
 
 Backend (from `apps/api`):
@@ -120,6 +166,9 @@ and verify real commits and reconnects, all 49 status pairs, invalid values,
 foreign-key/uniqueness constraints, deletion cascades, rollback, and update timestamps.
 Those tests commit to the disposable database and remove their schemas in teardown.
 CI supplies PostgreSQL and runs these checks on each supported Python version.
+Job API tests also verify submission/listing contracts, atomic rollback, input
+limits and redaction, and persistence through an application restart. Configuration,
+OpenAPI and unavailable-database tests run without a PostgreSQL test database.
 
 Example, assuming a separate `roleintel_test` database has already been created:
 

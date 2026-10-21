@@ -213,6 +213,13 @@ Create REST endpoints for:
 
 Use proper validation, structured error responses, and OpenAPI documentation.
 
+The initial job-submission API accepts user-supplied structured fields with at
+least a nonblank description or an HTTP(S) source URL. URLs are stored only;
+submission must not fetch or parse them. Each successful submission atomically
+creates a job and its Interested tracking record. Initial listing returns a JSON
+array, newest first with a stable ID tiebreaker. Filtering, pagination and status
+updates are separate increments, as is supported-provider URL parsing.
+
 ### 10. Testing and Local Deployment
 
 Provide:
