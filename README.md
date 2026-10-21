@@ -1,13 +1,13 @@
 # RoleIntel
 
-RoleIntel is an evolving job-intelligence and referral platform. This repository is being built in small, validated milestones. Phase 0 foundations are complete; Phase 1 currently includes job/application persistence and basic job submission/listing APIs, not the product dashboard.
+RoleIntel is an evolving job-intelligence and referral platform. This repository is being built in small, validated milestones. Phase 0 foundations are complete; Phase 1 currently includes job/application persistence, job APIs and a responsive dashboard/navigation shell. Frontend job workflows are not connected yet.
 
 ## Architecture
 
 - `apps/api` — Python, FastAPI, Pydantic; exposes health, job submission, filtered listing and status updates.
 - `apps/api/src/roleintel/models.py` — typed SQLAlchemy job and application models.
 - `apps/api/migrations` — versioned PostgreSQL schema managed by Alembic.
-- `apps/web` — Next.js App Router, React, TypeScript, Tailwind CSS, and shadcn/ui; currently contains a foundation landing page and a reusable UI primitive.
+- `apps/web` — Next.js App Router, React, TypeScript, Tailwind CSS, and shadcn/ui; includes a responsive dashboard shell, shared navigation, placeholder routes and a reusable UI primitive.
 - `docker-compose.yml` — local PostgreSQL service for future persistence work.
 - `.github/workflows/ci.yml` — backend and frontend checks for pushes and pull requests targeting `main`.
 
@@ -43,7 +43,18 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000` for the web foundation, `http://localhost:8000/health` for the API health check, and `http://localhost:8000/docs` for OpenAPI documentation.
+Open `http://localhost:3000` for the dashboard shell, `http://localhost:8000/health` for the API health check, and `http://localhost:8000/docs` for OpenAPI documentation.
+
+### Frontend preview
+
+The dashboard at `/` has persistent desktop navigation and an expandable mobile
+menu. Keyboard users can skip to main content or close the open menu with Escape.
+Navigation links resolve to `/search` (job search), `/jobs` (saved jobs),
+`/contacts`, `/messages`, `/applications` (application tracker), and `/settings`.
+These six destinations are explicitly labeled placeholders, not functional
+workflows. Dashboard metrics read **Not connected**, not fabricated counts.
+The frontend does not call the job API, submit jobs, change statuses or send
+messages yet; it runs without the API or database.
 
 ## Local PostgreSQL
 

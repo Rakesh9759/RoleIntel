@@ -55,7 +55,11 @@ Include:
 - Application tracker
 - Settings
 
-Use realistic sample data initially.
+The initial navigation shell uses a light dashboard, persistent desktop sidebar,
+and expandable mobile navigation. Dashboard metrics display "Not connected" until
+real data is wired in; unfinished pages explicitly identify themselves as
+placeholders. Do not display fabricated counts or activity. Any later sample data
+must be clearly labeled as demonstration data.
 
 All navigation should work, even if advanced pages display placeholder content.
 
