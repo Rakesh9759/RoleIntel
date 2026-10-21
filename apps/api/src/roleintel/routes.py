@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -8,8 +9,10 @@ from roleintel.database import get_session
 from roleintel.jobs import create_job, get_job, list_jobs, update_job_status
 from roleintel.models import Job
 from roleintel.parsing import normalize_description
+from roleintel.providers.greenhouse import GreenhouseError, import_greenhouse_job
 from roleintel.schemas import (
     ErrorResponse,
+    GreenhouseImportRequest,
     JobCreate,
     JobFilters,
     JobParseRequest,
@@ -24,6 +27,7 @@ router = APIRouter(
     responses={503: {"model": ErrorResponse, "description": "Database unavailable"}},
 )
 DatabaseSession = Annotated[Session, Depends(get_session)]
+logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=JobRead, status_code=201)
@@ -39,6 +43,29 @@ def saved_jobs(session: DatabaseSession, filters: Annotated[JobFilters, Query()]
 @router.post("/parse", response_model=JobParseResult)
 def parse_description(submission: JobParseRequest) -> JobParseResult:
     return normalize_description(submission)
+
+
+@router.post(
+    "/import/greenhouse",
+    response_model=JobParseResult,
+    responses={
+        status: {"model": ErrorResponse, "description": description}
+        for status, description in {
+            404: "Posting not found",
+            502: "Invalid provider response",
+            503: "Provider unavailable",
+            504: "Provider timeout",
+        }.items()
+    },
+)
+async def import_greenhouse(submission: GreenhouseImportRequest) -> JobParseResult:
+    try:
+        return await import_greenhouse_job(submission.source_url)
+    except GreenhouseError as error:
+        logger.warning("Greenhouse import failed (%s)", error.code)
+        raise HTTPException(
+            status_code=error.status, detail={"code": error.code, "message": str(error)}
+        ) from error
 
 
 @router.get(

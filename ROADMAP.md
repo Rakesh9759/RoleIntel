@@ -5,11 +5,11 @@ This roadmap describes high-level product direction, not delivery promises. Prod
 ## Current
 
 - **Phase 0 — Project foundation complete:** repository, API and web skeletons, validated local PostgreSQL service, tests, and CI checks.
-- **Phase 1 — Local MVP in progress:** job/application schema, reversible migrations, persistence/status tests, job APIs and a responsive dashboard shell. Saved-job submission, listing, combined filters, pagination, direct-link details and explicit application-status controls are connected through a server-side API boundary. Manual pasted descriptions can be normalized into editable drafts and explicitly saved; extraction uses only labeled facts without inference or network calls. Other workspace pages remain clearly labeled previews; dashboard totals are not connected.
+- **Phase 1 — Local MVP in progress:** job/application schema, reversible migrations, persistence/status tests, job APIs and a responsive dashboard shell. Saved-job submission, listing, combined filters, pagination, direct-link details and explicit application-status controls are connected through a server-side API boundary. Manual pasted descriptions and supported Greenhouse postings produce editable drafts with separate explicit saving; manual extraction uses labeled facts without inference or network calls, and Greenhouse uses its official public read-only API. Other workspace pages remain clearly labeled previews; dashboard totals are not connected.
 
 ## Planned
 
-- **Remaining Phase 1 — Local MVP:** dashboard totals and removal workflows; supported ATS URL imports; validated resume handling; clearly labeled demonstration contacts; and grounded, editable outreach drafts. Features will be delivered as tested increments.
+- **Remaining Phase 1 — Local MVP:** dashboard totals and removal workflows; additional supported ATS imports; validated resume handling; clearly labeled demonstration contacts; and grounded, editable outreach drafts. Features will be delivered as tested increments.
 - **Phase 2 — Hiring intelligence:** authorized contact providers, provenance, verification, deduplication, and evidence-based relevance.
 - **Phase 3 — Job discovery:** authorized sources, freshness, deduplication, opt-in notifications, and explainable recommendations.
 - **Phase 4 — AI and referral intelligence:** evidence-backed summaries, relevance signals, and evaluated outreach assistance.

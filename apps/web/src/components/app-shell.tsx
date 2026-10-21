@@ -107,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             Local workspace
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            No account or external providers connected.
+            Single-user workspace. No account connected.
           </p>
         </div>
       </aside>

@@ -52,10 +52,43 @@ The dashboard at `/` has persistent desktop navigation and an expandable mobile
 menu. Keyboard users can skip to main content or close the open menu with Escape.
 Navigation links resolve to `/search` (job search), `/jobs` (saved jobs),
 `/contacts`, `/messages`, `/applications` (application tracker), and `/settings`.
-Saved jobs and manual-description import on Job search are functional; the other
+Saved jobs, manual-description normalization and Greenhouse posting import on Job search are functional; the other
 four destinations remain explicitly labeled placeholders. Dashboard aggregate metrics read **Not connected**, not
 fabricated counts. Saved jobs link to persisted detail pages with status controls.
-External discovery, URL parsing and messaging remain deferred.
+External discovery, other provider imports and messaging remain deferred.
+
+### Import a Greenhouse posting
+
+Keep both web and API services running. On `/search`, paste a supported hosted
+posting URL and select **Import Greenhouse job**:
+
+- `https://boards.greenhouse.io/board-token/jobs/123`
+- `https://job-boards.greenhouse.io/board-token/jobs/123`
+- `https://my.greenhouse.io/jobs/board-token/123`
+
+This calls `POST /api/jobs/import/greenhouse` with `{"source_url":"..."}` and
+returns the same editable draft/warnings shape as manual normalization (HTTP 200,
+not a saved job). Review/edit the preview, then separately select **Save reviewed
+job**. Importing makes no database writes; saving still requires PostgreSQL.
+Failed imports keep the URL and pasted fallback text; failed saves keep edits.
+
+Only Greenhouse's [official public read-only Job Board API](https://developers.greenhouse.io/job-board.html)
+is contacted; no API key is required. Tracking queries are discarded. Embedded
+board links, custom career sites, non-HTTPS URLs, credentials, explicit ports,
+fragments and other providers are not supported. The service constructs the API
+URL itself, disables environment proxies and redirects, requests uncompressed
+JSON, and enforces a six-second total network deadline, five-second per-operation
+timeouts and a 1,000,000-byte body limit. There are no automatic retries.
+
+Company/title/requisition/location/department come only from provider fields.
+Unknown facts remain blank, not inferred from the company token or description.
+Description HTML is converted to plain text with paragraph boundaries; scripts,
+styles and non-content elements are discarded and never executed. Canonical
+hosted URL is retained as source, never an arbitrary upstream link. Invalid or
+oversized descriptions fail rather than being truncated; optional oversized
+facts remain blank with review warnings. Closed posts (404), unsupported URLs
+(422), unusable responses (502), unavailability/rate limits (503) and timeouts
+(504) show explicit errors with manual-paste fallback.
 
 ### Paste and review a description
 
@@ -102,7 +135,8 @@ example: `http://127.0.0.1:8000`). Use an HTTP(S) origin only, with no credentia
 path, query or fragment. Next.js loads this file from the web app directory, not
 the repository root. Restart the web server after changing it. This variable is
 server-only; do not prefix it with `NEXT_PUBLIC_`. No browser CORS setup is needed:
-the browser uses same-origin `/api/jobs` GET/POST, `/api/jobs/parse` POST and per-job GET/PATCH route handlers, which forward
+the browser uses same-origin `/api/jobs` GET/POST, `/api/jobs/parse` and
+`/api/jobs/import/greenhouse` POST, and per-job GET/PATCH route handlers, which forward
 only to the configured backend, without cookies, redirects or caching.
 
 Start PostgreSQL, apply migrations and run FastAPI to use `/jobs`. Submit a

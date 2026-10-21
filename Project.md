@@ -119,7 +119,30 @@ the database, fetching URLs or creating records. The Job search page presents an
 editable preview. Users may correct/add fields, including an optional source
 URL, then explicitly save through the existing job-creation endpoint. Keep
 original text on normalization failures and preview edits on save failures.
-Provider URL imports remain separate increments.
+Greenhouse single-posting imports use `POST /api/jobs/import/greenhouse` with a
+`source_url`. Accept only HTTPS hosted URLs on `boards.greenhouse.io` or
+`job-boards.greenhouse.io` with `/board-token/jobs/numeric-id`, or
+`my.greenhouse.io` with `/jobs/board-token/numeric-id`. Discard tracking
+queries; reject credentials, explicit ports, fragments, embedded boards and custom
+career sites. Construct the official public Job Board API URL from the validated
+token/id; do not fetch the supplied URL or follow redirects. No API key is needed.
+
+Map only provider-supplied company, title, requisition ID, location and department
+names. Keep missing facts null; do not infer company from the board token or
+technology/experience/seniority from prose. Convert provider description HTML
+and entity-encoded markup into plain text, preserving paragraph boundaries and
+discarding scripts/styles/non-content elements; never render provider HTML.
+Use the canonical supported posting URL as source, not an arbitrary upstream link.
+Oversized optional facts remain null with warnings; unusable/oversized descriptions
+fail explicitly, without truncation.
+
+Fetching has a six-second total network deadline, five-second per-operation
+timeouts and a 1,000,000-byte response limit. Request uncompressed JSON and reject
+unexpected compression, redirects, invalid data and mismatched posting IDs.
+Importing needs no database and writes nothing. Show an editable preview and
+require explicit save through the existing creation workflow. Retain the URL on
+failure and offer manual fallback for unsupported/closed/unavailable posts.
+Feed browsing, other providers and automatic discovery remain separate increments.
 
 ### 4. Job Management
 
