@@ -6,9 +6,13 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session
 
 from roleintel.config import Settings
+from roleintel.database import get_session
+from roleintel.main import app
 
 
 @pytest.fixture
@@ -40,3 +44,17 @@ def postgres_engine() -> Iterator[Engine]:
                 connection.exec_driver_sql(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
         finally:
             admin.dispose()
+
+
+@pytest.fixture
+def jobs_client(postgres_engine: Engine) -> Iterator[TestClient]:
+    def session_override() -> Iterator[Session]:
+        with Session(postgres_engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = session_override
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.pop(get_session, None)

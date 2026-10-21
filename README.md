@@ -4,7 +4,7 @@ RoleIntel is an evolving job-intelligence and referral platform. This repository
 
 ## Architecture
 
-- `apps/api` — Python, FastAPI, Pydantic; exposes health and job submission/listing endpoints.
+- `apps/api` — Python, FastAPI, Pydantic; exposes health, job submission, filtered listing and status updates.
 - `apps/api/src/roleintel/models.py` — typed SQLAlchemy job and application models.
 - `apps/api/migrations` — versioned PostgreSQL schema managed by Alembic.
 - `apps/web` — Next.js App Router, React, TypeScript, Tailwind CSS, and shadcn/ui; currently contains a foundation landing page and a reusable UI primitive.
@@ -107,8 +107,24 @@ repository root so it can load the root `.env`.
   committed atomically. At least `description` or `source_url` is required.
 - `GET /api/jobs` returns `200` with a JSON array of saved jobs, newest first,
   ordered by creation timestamp and then ID descending. An empty database returns
-  `[]`. This initial local-MVP endpoint returns all jobs; pagination and filtering
-  will be added in the next increment.
+  `[]`. **Listing is now bounded by default**, unlike the initial unpaginated
+  endpoint: `limit` defaults to 20, accepts 1–100, and `offset` defaults to 0
+  (nonnegative, at most 9,223,372,036,854,775,807). Offsets beyond the result set return
+  `[]`. Responses remain arrays, with no total-count envelope. Concurrent inserts
+  or deletes can shift offset-based pages; pagination is not a snapshot.
+- Optional listing filters: `company` is a case-insensitive exact match, `status`
+  accepts one documented lowercase status value, and `q` is case-insensitive
+  substring search over title/company/description. Text filters are trimmed,
+  nonblank and limited to 1,000 characters. `%`, `_`, `/` and backslashes are
+  literal search characters, not wildcards. Supplied filters combine with AND,
+  before pagination. Unknown query parameters are rejected with `422`.
+- `PATCH /api/jobs/{job_id}/status` accepts only `{"status":"applied"}` and returns
+  `200` with the updated job and tracking record. Any of the seven statuses is
+  allowed, including repeated or backwards changes. Only application status and
+  its update timestamp change; repeating the same status is a no-op. A missing
+  job or tracking record returns structured `404` with code `job_not_found`;
+  malformed UUIDs or invalid bodies return `422`. Missing tracking is not silently
+  repaired.
 
 Example:
 
@@ -120,6 +136,10 @@ $body = @{
 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/jobs -ContentType "application/json" -Body $body
 Invoke-RestMethod -Uri http://localhost:8000/api/jobs
+Invoke-RestMethod -Uri "http://localhost:8000/api/jobs?company=Example%20Co&status=applied&q=python&limit=10&offset=0"
+# Replace the ID with one returned by job submission or listing.
+$statusBody = @{ status = "applied" } | ConvertTo-Json
+Invoke-RestMethod -Method Patch -Uri "http://localhost:8000/api/jobs/<job-id>/status" -ContentType "application/json" -Body $statusBody
 ```
 
 Optional fields are `company`, `title`, `requisition_id`, `location`,
@@ -140,8 +160,8 @@ Database engines are created lazily and disposed on application shutdown.
 Restart the API after changing database connection settings.
 
 This is a local single-user API with no authentication. Do not expose it publicly.
-Detail routes, filtering, pagination, status updates, URL parsing and UI integration
-are not implemented in this increment.
+Detail routes, deletion endpoints, URL parsing and UI integration are not
+implemented in this increment.
 
 ## Checks
 
@@ -169,6 +189,9 @@ CI supplies PostgreSQL and runs these checks on each supported Python version.
 Job API tests also verify submission/listing contracts, atomic rollback, input
 limits and redaction, and persistence through an application restart. Configuration,
 OpenAPI and unavailable-database tests run without a PostgreSQL test database.
+Filtering/status tests cover bounded pagination with stable ties, combined filters,
+literal search characters, invalid query/body values, persisted status changes,
+missing records and rollback after a failed status write.
 
 Example, assuming a separate `roleintel_test` database has already been created:
 

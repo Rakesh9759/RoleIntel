@@ -51,6 +51,22 @@ class ApplicationRead(BaseModel):
     updated_at: datetime
 
 
+class JobFilters(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    limit: int = Field(default=20, ge=1, le=100)
+    offset: int = Field(default=0, ge=0, le=2**63 - 1)
+    company: ShortText | None = None
+    status: ApplicationStatus | None = None
+    q: ShortText | None = None
+
+
+class StatusUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: ApplicationStatus
+
+
 class JobRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

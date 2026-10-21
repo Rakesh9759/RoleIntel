@@ -1,5 +1,4 @@
 import logging
-from collections.abc import Iterator
 from pathlib import Path
 from uuid import UUID
 
@@ -9,24 +8,10 @@ from pydantic import ValidationError
 from sqlalchemy import Engine, func, select, text
 from sqlalchemy.orm import Session
 
-from roleintel.database import dispose_engine, get_engine, get_session
+from roleintel.database import dispose_engine, get_engine
 from roleintel.main import app
 from roleintel.models import Application, Job
-from roleintel.schemas import JobCreate
-
-
-@pytest.fixture
-def jobs_client(postgres_engine: Engine) -> Iterator[TestClient]:
-    def session_override() -> Iterator[Session]:
-        with Session(postgres_engine) as session:
-            yield session
-
-    app.dependency_overrides[get_session] = session_override
-    try:
-        with TestClient(app) as client:
-            yield client
-    finally:
-        app.dependency_overrides.pop(get_session, None)
+from roleintel.schemas import JobCreate, JobFilters
 
 
 @pytest.mark.integration
@@ -237,8 +222,9 @@ def test_database_configuration_failure_is_explicit(
     assert "configuration is missing or invalid" in caplog.text
 
 
+@pytest.mark.parametrize("method", ["GET", "PATCH"])
 def test_unreachable_database_is_redacted(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, method: str
 ) -> None:
     monkeypatch.setenv(
         "DATABASE_URL",
@@ -246,7 +232,13 @@ def test_unreachable_database_is_redacted(
     )
     dispose_engine()
     with TestClient(app) as client, caplog.at_level(logging.ERROR):
-        response = client.get("/api/jobs")
+        if method == "GET":
+            response = client.get("/api/jobs")
+        else:
+            response = client.patch(
+                "/api/jobs/00000000-0000-0000-0000-000000000001/status",
+                json={"status": "applied"},
+            )
         assert response.status_code == 503
     assert "private_password" not in response.text
     assert "private_password" not in caplog.text
@@ -262,3 +254,24 @@ def test_openapi_documents_submission_and_listing() -> None:
     assert "201" in operations["post"]["responses"]
     assert "200" in operations["get"]["responses"]
     assert "503" in operations["get"]["responses"]
+    parameters = {item["name"]: item["schema"] for item in operations["get"]["parameters"]}
+    assert parameters["limit"]["default"] == 20
+    assert parameters["limit"]["maximum"] == 100
+    assert parameters["offset"]["default"] == 0
+    assert {"q", "company", "status"} <= parameters.keys()
+    patch = response.json()["paths"]["/api/jobs/{job_id}/status"]["patch"]
+    assert {"200", "404", "422", "503"} <= patch["responses"].keys()
+
+
+def test_filter_model_boundaries() -> None:
+    filters = JobFilters(limit=100, offset=2**63 - 1, company="x" * 1000, q="y" * 1000)
+    assert filters.limit == 100
+    assert filters.offset == 2**63 - 1
+    for payload in (
+        {"limit": 101},
+        {"offset": 2**63},
+        {"company": "x" * 1001},
+        {"q": "y" * 1001},
+    ):
+        with pytest.raises(ValidationError):
+            JobFilters.model_validate(payload)

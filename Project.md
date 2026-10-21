@@ -216,9 +216,14 @@ Use proper validation, structured error responses, and OpenAPI documentation.
 The initial job-submission API accepts user-supplied structured fields with at
 least a nonblank description or an HTTP(S) source URL. URLs are stored only;
 submission must not fetch or parse them. Each successful submission atomically
-creates a job and its Interested tracking record. Initial listing returns a JSON
-array, newest first with a stable ID tiebreaker. Filtering, pagination and status
-updates are separate increments, as is supported-provider URL parsing.
+creates a job and its Interested tracking record. Listing returns a JSON array,
+newest first with a stable ID tiebreaker, using limit/offset pagination (20 jobs
+by default, at most 100 per request). It supports a case-insensitive exact
+company filter, a single application-status filter, and literal case-insensitive
+substring search across title, company and description; supplied filters combine
+with AND. Status updates accept any documented status and return the updated job;
+missing jobs or tracking records return 404. Supported-provider URL parsing
+remains a separate increment.
 
 ### 10. Testing and Local Deployment
 
