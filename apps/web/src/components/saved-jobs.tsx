@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   applicationStatuses,
@@ -308,7 +309,12 @@ export function SavedJobs() {
                     className="rounded-2xl border border-slate-200 bg-white p-5"
                   >
                     <h3 className="text-lg font-semibold wrap-anywhere">
-                      {job.title ?? "Title not available"}
+                      <Link
+                        href={`/jobs/${encodeURIComponent(job.id)}`}
+                        className="rounded text-indigo-800 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                      >
+                        {job.title ?? "Title not available"}
+                      </Link>
                     </h3>
                     <p className="mt-2 wrap-anywhere text-slate-600">
                       {job.company ?? "Company not available"} &middot;{" "}

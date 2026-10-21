@@ -69,7 +69,16 @@ company and status filters, and paginate in pages of 20. Show explicit loading,
 empty, service-error and retry states. Successful saves reset the form and filters
 to the newest page; failed saves retain user input. URLs are stored only, never
 fetched in this workflow. Use a server-only API origin and same-origin frontend
-GET/POST handlers. Job details and status-edit controls are a separate increment.
+GET/POST handlers.
+
+Saved-job titles link to dedicated detail pages that support direct access and
+reload through a single-job GET endpoint. Display all stored fields, safe source
+links and timestamps; do not invent missing data or render submitted HTML.
+Application status changes require an explicit Save status action, support all
+seven statuses, and display only API-confirmed saved state. Preserve the selected
+value on failure, prevent duplicate in-flight updates, and provide explicit
+not-found/service-error states with retry for service errors. Missing tracking
+stays visible as unavailable; it is never silently recreated.
 
 ### 3. Job URL Input and Extraction
 

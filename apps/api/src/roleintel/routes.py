@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from roleintel.database import get_session
-from roleintel.jobs import create_job, list_jobs, update_job_status
+from roleintel.jobs import create_job, get_job, list_jobs, update_job_status
 from roleintel.models import Job
 from roleintel.schemas import ErrorResponse, JobCreate, JobFilters, JobRead, StatusUpdate
 
@@ -25,6 +25,21 @@ def submit_job(submission: JobCreate, session: DatabaseSession) -> Job:
 @router.get("", response_model=list[JobRead])
 def saved_jobs(session: DatabaseSession, filters: Annotated[JobFilters, Query()]) -> list[Job]:
     return list_jobs(session, filters)
+
+
+@router.get(
+    "/{job_id}",
+    response_model=JobRead,
+    responses={404: {"model": ErrorResponse, "description": "Job not found"}},
+)
+def job_details(job_id: UUID, session: DatabaseSession) -> Job:
+    job = get_job(session, job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "job_not_found", "message": "Saved job not found"},
+        )
+    return job
 
 
 @router.patch(

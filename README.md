@@ -54,8 +54,8 @@ Navigation links resolve to `/search` (job search), `/jobs` (saved jobs),
 `/contacts`, `/messages`, `/applications` (application tracker), and `/settings`.
 The saved jobs page is functional; the other five destinations remain explicitly
 labeled placeholders. Dashboard aggregate metrics read **Not connected**, not
-fabricated counts. Job details and status editing, external discovery, URL
-parsing and messaging remain deferred.
+fabricated counts. Saved jobs link to persisted detail pages with status controls.
+External discovery, URL parsing and messaging remain deferred.
 
 ### Saved jobs
 
@@ -64,7 +64,7 @@ example: `http://127.0.0.1:8000`). Use an HTTP(S) origin only, with no credentia
 path, query or fragment. Next.js loads this file from the web app directory, not
 the repository root. Restart the web server after changing it. This variable is
 server-only; do not prefix it with `NEXT_PUBLIC_`. No browser CORS setup is needed:
-the browser uses same-origin `/api/jobs` GET/POST route handlers, which forward
+the browser uses same-origin `/api/jobs` GET/POST and per-job GET/PATCH route handlers, which forward
 only to the configured backend, without cookies, redirects or caching.
 
 Start PostgreSQL, apply migrations and run FastAPI to use `/jobs`. Submit a
@@ -85,6 +85,27 @@ sensitive; the proxy logs only generic failure categories/statuses.
 The shell and production build still work without a running backend; `/jobs`
 will show a service error instead of records. Keep both services local: this is
 not an authenticated, tenant-isolated public service.
+
+### Job details and status
+
+Select a saved job title to open `/jobs/{id}`. Direct links and reloads read the
+single-job API endpoint rather than searching a paginated list. Details include
+all stored job fields, source URL, job timestamps and application tracking
+metadata; unknown values remain **Not available**. Descriptions render as plain
+text, and only HTTP(S) source links without credentials are clickable (new tab).
+Timestamps are shown as stored ISO values, including their timezone.
+
+Choose any of the seven documented statuses and select **Save status** to apply
+it. The confirmed status changes only after the API acknowledges the update.
+The selector and button are disabled during the request; selecting the already
+saved status is a no-op. Failed updates keep the selected value and the last
+confirmed status. Reload the page after an ambiguous connection failure before
+retrying, because the server may have committed the update.
+
+Missing jobs and malformed IDs have explicit error states. Service failures
+offer **Retry loading job**. A job with no application tracking record remains
+readable, but cannot be updated here; no tracking is silently created. Returning
+to Saved jobs reloads persisted values, including status filters.
 
 ## Local PostgreSQL
 
@@ -166,6 +187,10 @@ repository root so it can load the root `.env`.
   job or tracking record returns structured `404` with code `job_not_found`;
   malformed UUIDs or invalid bodies return `422`. Missing tracking is not silently
   repaired.
+- `GET /api/jobs/{job_id}` returns `200` with the complete saved job and nullable
+  application record, independent of listing pagination. A missing job returns
+  structured `404` with code `job_not_found`; an invalid UUID returns `422`.
+  Missing tracking remains null and does not prevent reading job details.
 
 Example:
 
@@ -201,8 +226,8 @@ Database engines are created lazily and disposed on application shutdown.
 Restart the API after changing database connection settings.
 
 This is a local single-user API with no authentication. Do not expose it publicly.
-Detail routes, deletion endpoints, URL parsing and UI integration are not
-implemented in this increment.
+Deletion endpoints and URL parsing remain deferred. The frontend supports
+submission, listing, filters, job details and explicit status updates.
 
 ## Checks
 

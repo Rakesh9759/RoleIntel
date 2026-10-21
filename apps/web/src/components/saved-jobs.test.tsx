@@ -54,7 +54,7 @@ describe("saved job workflow", () => {
     expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
   });
 
-  it("renders real data safely, keeps nulls honest, and does not offer status edits or detail links", async () => {
+  it("renders real data safely, keeps nulls honest, and links to details without inline status edits", async () => {
     fetchMock.mockResolvedValue(
       Response.json([
         {
@@ -71,7 +71,9 @@ describe("saved job workflow", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Company not available/)).toBeInTheDocument();
     expect(screen.getByText("Tracking not available")).toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "<script>not executed</script>" }),
+    ).toHaveAttribute("href", "/jobs/job-1");
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
   });
 

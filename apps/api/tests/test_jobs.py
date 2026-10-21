@@ -222,7 +222,7 @@ def test_database_configuration_failure_is_explicit(
     assert "configuration is missing or invalid" in caplog.text
 
 
-@pytest.mark.parametrize("method", ["GET", "PATCH"])
+@pytest.mark.parametrize("method", ["GET", "DETAIL", "PATCH"])
 def test_unreachable_database_is_redacted(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, method: str
 ) -> None:
@@ -234,6 +234,8 @@ def test_unreachable_database_is_redacted(
     with TestClient(app) as client, caplog.at_level(logging.ERROR):
         if method == "GET":
             response = client.get("/api/jobs")
+        elif method == "DETAIL":
+            response = client.get("/api/jobs/00000000-0000-0000-0000-000000000001")
         else:
             response = client.patch(
                 "/api/jobs/00000000-0000-0000-0000-000000000001/status",
@@ -261,6 +263,8 @@ def test_openapi_documents_submission_and_listing() -> None:
     assert {"q", "company", "status"} <= parameters.keys()
     patch = response.json()["paths"]["/api/jobs/{job_id}/status"]["patch"]
     assert {"200", "404", "422", "503"} <= patch["responses"].keys()
+    detail = response.json()["paths"]["/api/jobs/{job_id}"]["get"]
+    assert {"200", "404", "422", "503"} <= detail["responses"].keys()
 
 
 def test_filter_model_boundaries() -> None:

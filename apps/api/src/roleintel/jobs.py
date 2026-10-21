@@ -41,11 +41,13 @@ def list_jobs(session: Session, filters: JobFilters) -> list[Job]:
     return list(session.scalars(statement))
 
 
+def get_job(session: Session, job_id: UUID) -> Job | None:
+    return session.scalar(select(Job).options(joinedload(Job.application)).where(Job.id == job_id))
+
+
 def update_job_status(session: Session, job_id: UUID, status: ApplicationStatus) -> Job | None:
     with session.begin():
-        job = session.scalar(
-            select(Job).options(joinedload(Job.application)).where(Job.id == job_id)
-        )
+        job = get_job(session, job_id)
         if job is None or job.application is None:
             return None
         job.application.status = status
