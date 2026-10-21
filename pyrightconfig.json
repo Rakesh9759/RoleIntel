@@ -1,0 +1,6 @@
+{
+  "include": ["apps"],
+  "extraPaths": ["apps/api/src"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic"
+}

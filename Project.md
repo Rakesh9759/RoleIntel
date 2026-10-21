@@ -105,6 +105,14 @@ Statuses:
 
 Persist data in PostgreSQL.
 
+For the single-user local MVP, each saved job has one application-tracking record,
+initially Interested. Users may change freely between the seven statuses above;
+no transition sequence is enforced. Unknown job details remain null in storage
+rather than storing invented values or display placeholders. The database enforces
+at most one tracking record per job and removes it when the job is deleted; the
+job-saving workflow will create the pair together. Multi-user ownership remains
+deferred until authentication and tenant isolation are introduced.
+
 ### 5. Basic People Discovery Interface
 
 Create a reusable contact-discovery module.

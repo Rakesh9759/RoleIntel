@@ -1,0 +1,9 @@
+PostgreSQL migrations for RoleIntel.
+
+From the repository root, with the API installed and DATABASE_URL configured:
+
+    python -m alembic -c apps\api\alembic.ini upgrade head
+    python -m alembic -c apps\api\alembic.ini check
+
+Use Alembic migrations, not Base.metadata.create_all(), to manage application tables.
+See the repository README for local configuration and disposable database tests.

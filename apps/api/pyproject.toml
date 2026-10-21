@@ -8,7 +8,11 @@ version = "0.1.0"
 description = "RoleIntel API service"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.16,<2.0",
     "fastapi>=0.115,<1.0",
+    "psycopg[binary]>=3.2,<4.0",
+    "pydantic-settings>=2.7,<3.0",
+    "sqlalchemy>=2.0.36,<2.1",
     "uvicorn[standard]>=0.34,<1.0",
 ]
 
@@ -26,6 +30,9 @@ where = ["src"]
 addopts = "-ra"
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "integration: requires TEST_DATABASE_URL pointing to a disposable PostgreSQL database",
+]
 
 [tool.ruff]
 line-length = 100
