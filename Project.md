@@ -63,6 +63,14 @@ must be clearly labeled as demonstration data.
 
 All navigation should work, even if advanced pages display placeholder content.
 
+The first API-connected workflow is Saved jobs: save optional title/company/location
+with a required description or HTTP(S) URL, list real records, combine search,
+company and status filters, and paginate in pages of 20. Show explicit loading,
+empty, service-error and retry states. Successful saves reset the form and filters
+to the newest page; failed saves retain user input. URLs are stored only, never
+fetched in this workflow. Use a server-only API origin and same-origin frontend
+GET/POST handlers. Job details and status-edit controls are a separate increment.
+
 ### 3. Job URL Input and Extraction
 
 Allow users to paste a job posting URL.

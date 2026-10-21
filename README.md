@@ -1,13 +1,13 @@
 # RoleIntel
 
-RoleIntel is an evolving job-intelligence and referral platform. This repository is being built in small, validated milestones. Phase 0 foundations are complete; Phase 1 currently includes job/application persistence, job APIs and a responsive dashboard/navigation shell. Frontend job workflows are not connected yet.
+RoleIntel is an evolving job-intelligence and referral platform. This repository is being built in small, validated milestones. Phase 0 foundations are complete; Phase 1 includes job/application persistence, job APIs, a responsive dashboard shell and API-connected saved-job submission, listing, filters and pagination.
 
 ## Architecture
 
 - `apps/api` — Python, FastAPI, Pydantic; exposes health, job submission, filtered listing and status updates.
 - `apps/api/src/roleintel/models.py` — typed SQLAlchemy job and application models.
 - `apps/api/migrations` — versioned PostgreSQL schema managed by Alembic.
-- `apps/web` — Next.js App Router, React, TypeScript, Tailwind CSS, and shadcn/ui; includes a responsive dashboard shell, shared navigation, placeholder routes and a reusable UI primitive.
+- `apps/web` — Next.js App Router, React, TypeScript, Tailwind CSS, and shadcn/ui; includes a responsive shell, saved-job workflow, same-origin API boundary and placeholder routes.
 - `docker-compose.yml` — local PostgreSQL service for future persistence work.
 - `.github/workflows/ci.yml` — backend and frontend checks for pushes and pull requests targeting `main`.
 
@@ -40,6 +40,7 @@ Start the frontend in another terminal:
 ```powershell
 Set-Location apps\web
 npm ci
+Copy-Item .env.example .env.local
 npm run dev
 ```
 
@@ -51,10 +52,39 @@ The dashboard at `/` has persistent desktop navigation and an expandable mobile
 menu. Keyboard users can skip to main content or close the open menu with Escape.
 Navigation links resolve to `/search` (job search), `/jobs` (saved jobs),
 `/contacts`, `/messages`, `/applications` (application tracker), and `/settings`.
-These six destinations are explicitly labeled placeholders, not functional
-workflows. Dashboard metrics read **Not connected**, not fabricated counts.
-The frontend does not call the job API, submit jobs, change statuses or send
-messages yet; it runs without the API or database.
+The saved jobs page is functional; the other five destinations remain explicitly
+labeled placeholders. Dashboard aggregate metrics read **Not connected**, not
+fabricated counts. Job details and status editing, external discovery, URL
+parsing and messaging remain deferred.
+
+### Saved jobs
+
+Set `ROLEINTEL_API_URL` in `apps/web/.env.local` to the FastAPI origin (default
+example: `http://127.0.0.1:8000`). Use an HTTP(S) origin only, with no credentials,
+path, query or fragment. Next.js loads this file from the web app directory, not
+the repository root. Restart the web server after changing it. This variable is
+server-only; do not prefix it with `NEXT_PUBLIC_`. No browser CORS setup is needed:
+the browser uses same-origin `/api/jobs` GET/POST route handlers, which forward
+only to the configured backend, without cookies, redirects or caching.
+
+Start PostgreSQL, apply migrations and run FastAPI to use `/jobs`. Submit a
+description or HTTP(S) source URL; title, company and location are optional.
+URLs are stored only, not fetched. Records start as Interested. Missing fields
+are displayed as unavailable rather than invented. Search, exact company and
+status filters combine before 20-record pagination; an exactly full last page may
+have an empty next page because the API does not return a total count.
+
+Successful saves clear the submission form and filters and reload the newest
+records. Failed saves retain input. Network failures can occur after a database
+commit: check the list before resubmitting, since submissions are not idempotent
+and automatic retries are deliberately disabled. API/configuration/database
+errors are shown explicitly with list retry, never as an empty successful result.
+Upstream requests time out after 10 seconds. Treat submitted job content as
+sensitive; the proxy logs only generic failure categories/statuses.
+
+The shell and production build still work without a running backend; `/jobs`
+will show a service error instead of records. Keep both services local: this is
+not an authenticated, tenant-isolated public service.
 
 ## Local PostgreSQL
 

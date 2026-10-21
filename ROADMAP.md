@@ -5,11 +5,11 @@ This roadmap describes high-level product direction, not delivery promises. Prod
 ## Current
 
 - **Phase 0 — Project foundation complete:** repository, API and web skeletons, validated local PostgreSQL service, tests, and CI checks.
-- **Phase 1 — Local MVP in progress:** job/application schema, reversible migrations, persistence/status tests, job submission, paginated search/filtering and application-status updates. A responsive dashboard/navigation shell is available with clearly labeled placeholder pages; frontend data workflows are not connected yet.
+- **Phase 1 — Local MVP in progress:** job/application schema, reversible migrations, persistence/status tests, job APIs and a responsive dashboard shell. Saved-job submission, listing, combined filters and pagination are connected through a server-side API boundary. Other workspace pages remain clearly labeled previews; dashboard totals are not connected.
 
 ## Planned
 
-- **Remaining Phase 1 — Local MVP:** connect dashboard and saved-job workflows to the API; job detail/removal workflows and UI; supported ATS and manual job parsing; validated resume handling; clearly labeled demonstration contacts; and grounded, editable outreach drafts. Features will be delivered as tested increments.
+- **Remaining Phase 1 — Local MVP:** job details and status-edit controls; dashboard totals and removal workflows; supported ATS and manual job parsing; validated resume handling; clearly labeled demonstration contacts; and grounded, editable outreach drafts. Features will be delivered as tested increments.
 - **Phase 2 — Hiring intelligence:** authorized contact providers, provenance, verification, deduplication, and evidence-based relevance.
 - **Phase 3 — Job discovery:** authorized sources, freshness, deduplication, opt-in notifications, and explainable recommendations.
 - **Phase 4 — AI and referral intelligence:** evidence-backed summaries, relevance signals, and evaluated outreach assistance.

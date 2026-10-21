@@ -2,7 +2,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import Home from "./page";
-import JobsPage from "./jobs/page";
 import SearchPage from "./search/page";
 import ContactsPage from "./contacts/page";
 import MessagesPage from "./messages/page";
@@ -30,7 +29,6 @@ describe("home page", () => {
 
 describe("workspace pages", () => {
   it.each([
-    ["Saved jobs", JobsPage],
     ["Job search", SearchPage],
     ["Contacts", ContactsPage],
     ["Messages", MessagesPage],

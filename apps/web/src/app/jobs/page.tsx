@@ -1,10 +1,5 @@
-import { WorkspacePlaceholder } from "@/components/workspace-placeholder";
+import { SavedJobs } from "@/components/saved-jobs";
 
 export default function JobsPage() {
-  return (
-    <WorkspacePlaceholder
-      title="Saved jobs"
-      description="Saved-job listing, filters and submission will connect to the job API in the next increment. Existing database records are not displayed here yet."
-    />
-  );
+  return <SavedJobs />;
 }

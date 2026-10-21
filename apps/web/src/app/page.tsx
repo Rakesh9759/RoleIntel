@@ -43,9 +43,10 @@ export default function Home() {
           The foundation for your search
         </h2>
         <p className="mt-3 max-w-2xl leading-7 text-slate-700">
-          Explore the workspace using the navigation. These pages are not
-          connected to the job API yet, so no saved-job counts or activity are
-          shown. No data is submitted or changed from this dashboard.
+          Save jobs and browse real records on the Saved jobs page. Dashboard
+          totals and activity are not connected to the job API yet, so no counts
+          are shown here. Other workspace features remain clearly labeled
+          previews.
         </p>
         <Link
           href="/jobs"

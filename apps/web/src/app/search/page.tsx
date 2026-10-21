@@ -4,7 +4,7 @@ export default function SearchPage() {
   return (
     <WorkspacePlaceholder
       title="Job search"
-      description="Job submission and search are not connected in this interface yet. Supported-provider URL parsing will be introduced separately."
+      description="External job discovery and supported-provider URL parsing are not available yet. Use Saved jobs in the navigation to save user-supplied information and search existing records."
     />
   );
 }
