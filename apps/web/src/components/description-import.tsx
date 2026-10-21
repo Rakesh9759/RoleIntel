@@ -28,7 +28,13 @@ async function readResponse(response: Response): Promise<unknown> {
 export function DescriptionImport() {
   const [text, setText] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
-  const [draftSource, setDraftSource] = useState<"manual" | "greenhouse">(
+  const [provider, setProvider] = useState("greenhouse");
+  const providerName = {
+    greenhouse: "Greenhouse",
+    lever: "Lever",
+    ashby: "Ashby",
+  }[provider];
+  const [draftSource, setDraftSource] = useState<"manual" | "provider">(
     "manual",
   );
   const [draft, setDraft] = useState<JobDraft | null>(null);
@@ -40,12 +46,12 @@ export function DescriptionImport() {
   const textInput = useRef<HTMLTextAreaElement>(null);
   const urlInput = useRef<HTMLInputElement>(null);
 
-  async function importGreenhouse(event: FormEvent<HTMLFormElement>) {
+  async function importPosting(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (lock.current) return;
     setError("");
     if (!sourceUrl.trim()) {
-      setError("Enter a Greenhouse posting URL before importing.");
+      setError(`Enter a ${providerName} posting URL before importing.`);
       return;
     }
     lock.current = true;
@@ -53,20 +59,20 @@ export function DescriptionImport() {
     setSavedId("");
     try {
       const data = await readResponse(
-        await fetch("/api/jobs/import/greenhouse", {
+        await fetch(`/api/jobs/import/${provider}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ source_url: sourceUrl.trim() }),
         }),
       );
       if (!isJobDraft(data))
-        throw new Error("Greenhouse returned an invalid preview.");
-      setDraftSource("greenhouse");
+        throw new Error(`${providerName} returned an invalid preview.`);
+      setDraftSource("provider");
       setDraft(data);
       requestAnimationFrame(() => preview.current?.focus());
     } catch (error) {
       setError(
-        `${error instanceof Error ? error.message : "Unable to import Greenhouse posting."} Your URL has been kept. Nothing has been saved.`,
+        `${error instanceof Error ? error.message : "Unable to import posting."} Your URL has been kept. Nothing has been saved.`,
       );
     } finally {
       lock.current = false;
@@ -178,10 +184,11 @@ export function DescriptionImport() {
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Job search</h1>
       <p className="max-w-3xl leading-7 text-slate-600">
-        Import a public Greenhouse posting or paste a job description to prepare
-        a draft. Only supplied provider fields or explicit labeled facts are
-        used, never inferred. Review every field before saving. Other providers
-        and external discovery are not available yet.
+        Import a public Greenhouse, Lever or Ashby posting or paste a job
+        description to prepare a draft. Only supplied provider fields or
+        explicit labeled facts are used, never inferred. Review every field
+        before saving. Company-board browsing and external discovery are not
+        available yet.
       </p>
       <Link
         href="/jobs"
@@ -191,12 +198,27 @@ export function DescriptionImport() {
       </Link>
       {!draft && !savedId && (
         <form
-          onSubmit={importGreenhouse}
+          onSubmit={importPosting}
           className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6"
         >
-          <h2 className="text-xl font-semibold">Import a Greenhouse posting</h2>
+          <h2 className="text-xl font-semibold">
+            Import a {providerName} posting
+          </h2>
           <label className="block text-sm font-medium">
-            Greenhouse posting URL
+            Job provider
+            <select
+              value={provider}
+              onChange={(event) => setProvider(event.target.value)}
+              disabled={busy !== null}
+              className={inputClass}
+            >
+              <option value="greenhouse">Greenhouse</option>
+              <option value="lever">Lever</option>
+              <option value="ashby">Ashby</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            {providerName} posting URL
             <input
               ref={urlInput}
               type="url"
@@ -208,19 +230,21 @@ export function DescriptionImport() {
             />
           </label>
           <p className="text-sm leading-6 wrap-anywhere text-slate-600">
-            Supported: https://job-boards.greenhouse.io/company/jobs/123 or
-            https://boards.greenhouse.io/company/jobs/123 or
-            https://my.greenhouse.io/jobs/company/123. Tracking query parameters
-            are discarded. Only the official public API is contacted; custom
-            career sites and embedded board links are not supported. Importing
-            creates a preview, not a saved job.
+            {provider === "greenhouse"
+              ? "Supported: https://job-boards.greenhouse.io/company/jobs/123 or https://boards.greenhouse.io/company/jobs/123 or https://my.greenhouse.io/jobs/company/123."
+              : provider === "lever"
+                ? "Supported: https://jobs.lever.co/company/posting-uuid or https://jobs.eu.lever.co/company/posting-uuid."
+                : "Supported: https://jobs.ashbyhq.com/company/posting-uuid. Ashby requires reading the public board to select this listed job; oversized boards require manual fallback."}{" "}
+            Tracking query parameters are discarded. Only the official public
+            API is contacted; custom career sites and embedded board links are
+            not supported. Importing creates a preview, not a saved job.
           </p>
           <button
             className={buttonClass}
             type="submit"
             disabled={busy !== null}
           >
-            {busy === "import" ? "Importing..." : "Import Greenhouse job"}
+            {busy === "import" ? "Importing..." : `Import ${providerName} job`}
           </button>
         </form>
       )}
@@ -361,14 +385,14 @@ export function DescriptionImport() {
                 setDraft(null);
                 setError("");
                 requestAnimationFrame(() =>
-                  (draftSource === "greenhouse"
+                  (draftSource === "provider"
                     ? urlInput
                     : textInput
                   ).current?.focus(),
                 );
               }}
             >
-              {draftSource === "greenhouse"
+              {draftSource === "provider"
                 ? "Back to posting URL (discard preview edits)"
                 : "Back to pasted text (discard preview edits)"}
             </button>
@@ -404,7 +428,7 @@ export function DescriptionImport() {
               requestAnimationFrame(() => textInput.current?.focus());
             }}
           >
-            {draftSource === "greenhouse"
+            {draftSource === "provider"
               ? "Import another job"
               : "Import another description"}
           </button>

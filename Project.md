@@ -142,7 +142,40 @@ unexpected compression, redirects, invalid data and mismatched posting IDs.
 Importing needs no database and writes nothing. Show an editable preview and
 require explicit save through the existing creation workflow. Retain the URL on
 failure and offer manual fallback for unsupported/closed/unavailable posts.
-Feed browsing, other providers and automatic discovery remain separate increments.
+
+Lever and Ashby use the same request/draft contract at
+`POST /api/jobs/import/lever` and `POST /api/jobs/import/ashby`. Choose the provider
+explicitly in Job search; retain provider and URL on failure. Supported URLs:
+`https://jobs.lever.co/company/posting-uuid`,
+`https://jobs.eu.lever.co/company/posting-uuid`, and
+`https://jobs.ashbyhq.com/company/posting-uuid`. Queries are discarded;
+credentials, explicit ports, fragments, application URLs, custom sites and
+non-UUID identifiers are rejected before any network access.
+
+Lever uses its official global/EU single-posting endpoint. Keep the combined
+opening/body description plus supplied lists, closing and salary-description
+sections, without duplicating the opening. Ashby uses its official public board
+API (no public single-posting endpoint); select exactly one matching canonical
+`jobUrl` with `isListed: true`, reject duplicates/invalid responses, and report
+missing/unlisted posts explicitly. An oversized board fails with manual fallback,
+not partial or silently truncated results. Plain descriptions are preferred;
+HTML is converted only when plain text is missing. Provider-supplied title,
+location, department/team are mapped; unavailable company, requisition,
+technology, experience and seniority remain null, never derived from board tokens
+or prose. Both use the same bounded read-only transport and review/save safeguards.
+
+#### Planned: Find jobs at selected companies
+
+Add an on-demand company-board workflow using supported official Greenhouse,
+Lever and Ashby feeds. Users explicitly choose company board URLs/tokens rather
+than pasting individual job links; arbitrary company-name discovery is not
+assumed. Show source, fetch time, title/location filters and honest empty,
+partial-failure or limit states. Deduplicate by provider/board/posting identity.
+Selecting a posting prepares the existing editable preview; only explicit
+reviewed save persists it. Confirm board/result limits and pagination before
+implementation. No scheduled scans, notifications, global crawler or LinkedIn
+account automation in this increment; full automated discovery remains Phase 3.
+This capability is planned, not implemented.
 
 ### 4. Job Management
 

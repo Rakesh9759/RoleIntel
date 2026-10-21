@@ -66,7 +66,7 @@ class JobParseResult(JobCreate):
     warnings: list[str]
 
 
-class GreenhouseImportRequest(BaseModel):
+class JobImportRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source_url: Annotated[

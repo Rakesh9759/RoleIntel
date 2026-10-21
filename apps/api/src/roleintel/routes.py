@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,12 +9,15 @@ from roleintel.database import get_session
 from roleintel.jobs import create_job, get_job, list_jobs, update_job_status
 from roleintel.models import Job
 from roleintel.parsing import normalize_description
-from roleintel.providers.greenhouse import GreenhouseError, import_greenhouse_job
+from roleintel.providers.ashby import import_ashby_job
+from roleintel.providers.common import ProviderError
+from roleintel.providers.greenhouse import import_greenhouse_job
+from roleintel.providers.lever import import_lever_job
 from roleintel.schemas import (
     ErrorResponse,
-    GreenhouseImportRequest,
     JobCreate,
     JobFilters,
+    JobImportRequest,
     JobParseRequest,
     JobParseResult,
     JobRead,
@@ -46,7 +49,7 @@ def parse_description(submission: JobParseRequest) -> JobParseResult:
 
 
 @router.post(
-    "/import/greenhouse",
+    "/import/{provider}",
     response_model=JobParseResult,
     responses={
         status: {"model": ErrorResponse, "description": description}
@@ -58,11 +61,18 @@ def parse_description(submission: JobParseRequest) -> JobParseResult:
         }.items()
     },
 )
-async def import_greenhouse(submission: GreenhouseImportRequest) -> JobParseResult:
+async def import_posting(
+    provider: Literal["greenhouse", "lever", "ashby"], submission: JobImportRequest
+) -> JobParseResult:
+    importer = {
+        "greenhouse": import_greenhouse_job,
+        "lever": import_lever_job,
+        "ashby": import_ashby_job,
+    }[provider]
     try:
-        return await import_greenhouse_job(submission.source_url)
-    except GreenhouseError as error:
-        logger.warning("Greenhouse import failed (%s)", error.code)
+        return await importer(submission.source_url)
+    except ProviderError as error:
+        logger.warning("Provider import failed (%s, %s)", provider, error.code)
         raise HTTPException(
             status_code=error.status, detail={"code": error.code, "message": str(error)}
         ) from error

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from roleintel.main import app
 from roleintel.models import Application, Job
-from roleintel.providers import greenhouse
+from roleintel.providers import common, greenhouse
 
 URL = "https://job-boards.greenhouse.io/disposable-fixture/jobs/123"
 PAYLOAD = {
@@ -24,34 +24,6 @@ PAYLOAD = {
     "content": "<p>First &amp; second.</p><p>Next<br>line.</p><script>hidden()</script>",
     "absolute_url": "http://127.0.0.1/must-not-be-fetched",
 }
-
-
-@pytest.fixture
-def transport(monkeypatch: pytest.MonkeyPatch) -> Callable[[httpx2.Response], list[httpx2.Request]]:
-    original = httpx2.AsyncClient
-
-    def configure(response: httpx2.Response) -> list[httpx2.Request]:
-        calls: list[httpx2.Request] = []
-
-        def handler(request: httpx2.Request) -> httpx2.Response:
-            calls.append(request)
-            return response
-
-        def factory(
-            *, timeout: float, follow_redirects: bool, trust_env: bool
-        ) -> httpx2.AsyncClient:
-            assert timeout == 5 and not follow_redirects and not trust_env
-            return original(
-                transport=httpx2.MockTransport(handler),
-                timeout=timeout,
-                follow_redirects=follow_redirects,
-                trust_env=trust_env,
-            )
-
-        monkeypatch.setattr(greenhouse.httpx2, "AsyncClient", factory)
-        return calls
-
-    return configure
 
 
 def test_public_api_import_maps_only_provider_fields_without_database(
@@ -121,9 +93,7 @@ def test_public_api_import_maps_only_provider_fields_without_database(
 def test_unsupported_urls_never_contact_network(url: str) -> None:
     with (
         TestClient(app) as client,
-        patch.object(
-            greenhouse.httpx2, "AsyncClient", side_effect=AssertionError("Network accessed")
-        ),
+        patch.object(common.httpx2, "AsyncClient", side_effect=AssertionError("Network accessed")),
     ):
         response = client.post("/api/jobs/import/greenhouse", json={"source_url": url})
     assert response.status_code == 422
@@ -213,7 +183,7 @@ def test_oversized_optional_fields_warn_without_truncation() -> None:
     ],
 )
 def test_invalid_provider_data_is_explicit(data: object) -> None:
-    with pytest.raises(greenhouse.GreenhouseError) as error:
+    with pytest.raises(common.ProviderError) as error:
         greenhouse.provider_draft(data, 123, URL)
     assert error.value.status == 502
 
@@ -269,7 +239,7 @@ def test_response_size_limit_is_inclusive(
     import json
 
     content = json.dumps(PAYLOAD).encode()
-    body = content + b" " * (greenhouse.MAX_RESPONSE_BYTES - len(content))
+    body = content + b" " * (common.MAX_RESPONSE_BYTES - len(content))
     transport(httpx2.Response(200, content=body, headers={"content-type": "application/json"}))
     with TestClient(app) as client:
         result = client.post("/api/jobs/import/greenhouse", json={"source_url": URL})
@@ -304,7 +274,7 @@ class SlowStream(httpx2.AsyncByteStream):
 def test_total_deadline_caps_slow_response(
     transport: Callable[[httpx2.Response], list[httpx2.Request]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(greenhouse, "IMPORT_DEADLINE_SECONDS", 0.01)
+    monkeypatch.setattr(common, "IMPORT_DEADLINE_SECONDS", 0.01)
     transport(
         httpx2.Response(200, stream=SlowStream(), headers={"content-type": "application/json"})
     )
@@ -317,7 +287,7 @@ def test_total_deadline_caps_slow_response(
 def test_transport_errors_are_redacted(error: httpx2.HTTPError) -> None:
     with (
         TestClient(app) as client,
-        patch.object(greenhouse.httpx2.AsyncClient, "__aenter__", side_effect=error),
+        patch.object(common.httpx2.AsyncClient, "__aenter__", side_effect=error),
     ):
         result = client.post("/api/jobs/import/greenhouse", json={"source_url": URL})
     assert result.status_code == (504 if isinstance(error, httpx2.TimeoutException) else 502)

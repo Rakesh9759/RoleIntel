@@ -10,10 +10,15 @@ function failure(status: number, message: string) {
 
 export async function forwardJobRequest(request: Request, path = "/api/jobs") {
   const parsing = path === "/api/jobs/parse";
-  const importing = path === "/api/jobs/import/greenhouse";
+  const importProvider = {
+    "/api/jobs/import/greenhouse": "Greenhouse",
+    "/api/jobs/import/lever": "Lever",
+    "/api/jobs/import/ashby": "Ashby",
+  }[path];
+  const importing = importProvider !== undefined;
   const preview = parsing || importing;
   const previewService = importing
-    ? "Greenhouse import"
+    ? `${importProvider} import`
     : "Description normalization";
   const detail = path !== "/api/jobs" && !preview;
   let base: URL;
@@ -89,16 +94,21 @@ export async function forwardJobRequest(request: Request, path = "/api/jobs") {
     console.error("Job API returned an error", response.status);
     if (importing) {
       const messages: Record<number, string> = {
-        404: "Greenhouse posting was not found or is closed. Check the URL or paste the description manually.",
-        422: "Use an HTTPS boards.greenhouse.io or job-boards.greenhouse.io URL with /company/jobs/123, or my.greenhouse.io with /jobs/company/123.",
-        502: "Greenhouse returned an unusable posting. Paste the description manually instead.",
-        503: "Greenhouse import is unavailable or rate limited. Try again later or paste manually.",
-        504: "Greenhouse request timed out. Try again or paste the description manually.",
+        404: `${importProvider} posting was not found, is closed or unlisted. Check the URL or paste the description manually.`,
+        422:
+          importProvider === "Greenhouse"
+            ? "Use an HTTPS boards.greenhouse.io or job-boards.greenhouse.io URL with /company/jobs/123, or my.greenhouse.io with /jobs/company/123."
+            : importProvider === "Lever"
+              ? "Use an HTTPS jobs.lever.co or jobs.eu.lever.co URL with /company/posting-uuid."
+              : "Use an HTTPS jobs.ashbyhq.com URL with /company/posting-uuid.",
+        502: `${importProvider} returned an unusable or oversized posting/board. Paste the description manually instead.`,
+        503: `${importProvider} import is unavailable or rate limited. Try again later or paste manually.`,
+        504: `${importProvider} request timed out. Try again or paste the description manually.`,
       };
       return failure(
         response.status in messages ? response.status : 503,
         messages[response.status] ??
-          "Greenhouse import failed. Try again or paste manually.",
+          `${importProvider} import failed. Try again or paste manually.`,
       );
     }
     if (detail && response.status === 404)

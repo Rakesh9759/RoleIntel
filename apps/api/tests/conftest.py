@@ -1,8 +1,9 @@
 import os
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from uuid import uuid4
 
+import httpx2
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -13,6 +14,35 @@ from sqlalchemy.orm import Session
 from roleintel.config import Settings
 from roleintel.database import get_session
 from roleintel.main import app
+from roleintel.providers import common
+
+
+@pytest.fixture
+def transport(monkeypatch: pytest.MonkeyPatch) -> Callable[[httpx2.Response], list[httpx2.Request]]:
+    original = httpx2.AsyncClient
+
+    def configure(response: httpx2.Response) -> list[httpx2.Request]:
+        calls: list[httpx2.Request] = []
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            calls.append(request)
+            return response
+
+        def factory(
+            *, timeout: float, follow_redirects: bool, trust_env: bool
+        ) -> httpx2.AsyncClient:
+            assert timeout == 5 and not follow_redirects and not trust_env
+            return original(
+                transport=httpx2.MockTransport(handler),
+                timeout=timeout,
+                follow_redirects=follow_redirects,
+                trust_env=trust_env,
+            )
+
+        monkeypatch.setattr(common.httpx2, "AsyncClient", factory)
+        return calls
+
+    return configure
 
 
 @pytest.fixture

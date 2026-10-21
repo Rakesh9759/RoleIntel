@@ -11,7 +11,7 @@ RoleIntel is an evolving job-intelligence and referral platform. This repository
 - `docker-compose.yml` — local PostgreSQL service for future persistence work.
 - `.github/workflows/ci.yml` — backend and frontend checks for pushes and pull requests targeting `main`.
 
-Additional job APIs, dashboard workflows, and third-party providers remain deferred. The backend exposes interactive API documentation at `/docs` when running. Its health endpoint does not require database configuration or a running database.
+Further job APIs, dashboard workflows, and provider integrations remain deferred. The backend exposes interactive API documentation at `/docs` when running. Its health endpoint does not require database configuration or a running database.
 
 ## Prerequisites
 
@@ -52,10 +52,41 @@ The dashboard at `/` has persistent desktop navigation and an expandable mobile
 menu. Keyboard users can skip to main content or close the open menu with Escape.
 Navigation links resolve to `/search` (job search), `/jobs` (saved jobs),
 `/contacts`, `/messages`, `/applications` (application tracker), and `/settings`.
-Saved jobs, manual-description normalization and Greenhouse posting import on Job search are functional; the other
+Saved jobs, manual-description normalization and Greenhouse/Lever/Ashby posting imports on Job search are functional; the other
 four destinations remain explicitly labeled placeholders. Dashboard aggregate metrics read **Not connected**, not
 fabricated counts. Saved jobs link to persisted detail pages with status controls.
-External discovery, other provider imports and messaging remain deferred.
+Selected-company browsing, external discovery and messaging remain deferred.
+
+### Import a Lever or Ashby posting
+
+On `/search`, choose **Lever** or **Ashby** in **Job provider**, paste the
+posting URL, then import, review/edit and explicitly save as with Greenhouse.
+Supported formats:
+
+- `https://jobs.lever.co/company/posting-uuid`
+- `https://jobs.eu.lever.co/company/posting-uuid`
+- `https://jobs.ashbyhq.com/company/posting-uuid`
+
+The same-origin POST routes `/api/jobs/import/lever` and
+`/api/jobs/import/ashby` accept `{"source_url":"..."}` and return HTTP 200 drafts.
+Lever uses its [official Postings API](https://github.com/lever/postings-api)
+on `api.lever.co` or `api.eu.lever.co`, including supplied description, lists,
+closing and salary-description text. The combined opening/body is not duplicated.
+Ashby's [official public Job Posting API](https://developers.ashbyhq.com/docs/public-job-posting-api)
+returns a board, not one posting: the importer selects the exact matching listed
+`jobUrl`. Duplicate/invalid results fail explicitly; missing or unlisted posts
+return 404. Boards exceeding 1,000,000 bytes fail with manual-paste fallback;
+the importer never silently selects another job or truncates the board.
+
+Company name is not supplied by these APIs and remains blank for manual review,
+not inferred from a board token. Title, primary location and department/team map
+only from supplied fields. Requisition, technologies, experience and seniority
+remain unavailable. Plain descriptions are preferred, otherwise HTML is converted
+to plain text. Canonical supported input URL is the source; arbitrary upstream
+links are never fetched. All providers share the existing request timeout,
+response-size, no-redirect, no-proxy and explicit-save rules. No credentials,
+applications, automatic retries, arbitrary page scraping or discovery are used.
+Provider/URL and manual fallback text are retained on failed imports.
 
 ### Import a Greenhouse posting
 
@@ -136,7 +167,8 @@ path, query or fragment. Next.js loads this file from the web app directory, not
 the repository root. Restart the web server after changing it. This variable is
 server-only; do not prefix it with `NEXT_PUBLIC_`. No browser CORS setup is needed:
 the browser uses same-origin `/api/jobs` GET/POST, `/api/jobs/parse` and
-`/api/jobs/import/greenhouse` POST, and per-job GET/PATCH route handlers, which forward
+`/api/jobs/import/greenhouse`, `/api/jobs/import/lever` and
+`/api/jobs/import/ashby` POST, and per-job GET/PATCH route handlers, which forward
 only to the configured backend, without cookies, redirects or caching.
 
 Start PostgreSQL, apply migrations and run FastAPI to use `/jobs`. Submit a
@@ -293,8 +325,9 @@ Strings are trimmed and cannot be blank when supplied. Short fields and each
 technology are limited to 1,000 characters; descriptions and experience
 requirements to 100,000 characters; technologies to 100 entries; and source URLs
 to 2,048 characters. Source URLs must be HTTP(S) without embedded credentials.
-They are **stored only, never fetched**, and need not identify a supported
-provider yet. Each submission creates a new job; deduplication is not implemented.
+During creation they are **stored only, never fetched**, and need not identify a
+supported provider. Provider imports are separate read-only preview operations.
+Each submission creates a new job; deduplication is not implemented.
 
 Invalid bodies return `422` with structured validation details without echoing
 input values. Database/configuration failures return `503` with
