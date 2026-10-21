@@ -1,0 +1,33 @@
+# Private planning and local-only state
+.local/
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+*.egg-info/
+
+# Node.js
+node_modules/
+.next/
+out/
+coverage/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
